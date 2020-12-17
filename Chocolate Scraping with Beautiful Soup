@@ -1,0 +1,55 @@
+import codecademylib3_seaborn
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+# make request to get the raw html
+webpage = requests.get("https://content.codecademy.com/courses/beautifulsoup/cacao/index.html")
+
+# create beautiful soup object
+soup = BeautifulSoup(webpage.content, "html.parser")
+# print(soup)
+
+# find all ratings tags, create list, loop through tags and store the text from each tag
+ratings_tags = soup.find_all(attrs={"class": "Rating"})
+ratings = []
+for text in ratings_tags[1:]:
+  ratings.append(float(text.get_text()))
+# create and display a histogram of the ratings values
+plt.hist(ratings)
+plt.show()
+
+# find all company names tags, create list, loop through tags and store the text from each tag
+company_names_tags = soup.find_all(attrs={"class": "Company"})
+company_names = []
+for text in company_names_tags[1:]:
+  company_names.append(text.get_text())
+
+# create data frame with columns for company name and ratings
+d = {"Company": company_names, "Ratings": ratings}
+cocoa_df = pd.DataFrame.from_dict(d)
+
+# group data frame by company and get list of top 10 highest rated companies, based on average ratings
+mean_ratings = cocoa_df.groupby("Company").Ratings.mean()
+ten_best = mean_ratings.nlargest(10)
+
+#find all cocoa percentage tags, create list, loop through tags and store the text from each tag
+cocoa_tags = soup.select(".CocoaPercent")
+cocoa_percent = []
+for text in cocoa_tags[1:]:
+  value = int(float(text.get_text().strip("%")))
+  cocoa_percent.append(value)
+
+# add cocoa percentages as a column to the data frame
+d = {"Company": company_names, "Ratings": ratings, "CocoaPercentage": cocoa_percent}
+cocoa_df = pd.DataFrame.from_dict(d)
+
+# make a scatter plot of the ratings vs. cocoa percentage
+plt.scatter(cocoa_df.CocoaPercentage, cocoa_df.Rating)
+# using numpy commands, draw line of best fit to observe correlations
+z = np.polyfit(cocoa_df.CocoaPercentage, cocoa_df.Rating, 1)
+line_function = np.poly1d(z)
+plt.plot(cocoa_df.CocoaPercentage, line_function(cocoa_df.CocoaPercentage), "r--")
+plt.show()
